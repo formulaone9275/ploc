@@ -36,10 +36,14 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
 
     file_list=os.listdir(inputfolder)
     loc_dic={}
+
     with codecs.open(outputfile,'w+', encoding='utf8') as fo:
         for fi in file_list:
             line_count=1
             pair_list=[]
+            #deal with the case that location name and protein name appear multiple times
+            loc_index_dic={}
+            protein_index_dic={}
             with codecs.open(inputfolder+fi, encoding='utf8') as f:
                 for line in f:
                     if line_count==1:
@@ -64,11 +68,10 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
             first_pair_loc=True
             for ii in pair_list:
 
-                text=instance_text
-                protein_name=''
-                location_name=''
                 with codecs.open(inputfolder+fi, encoding='utf8') as f:
                     for line in f:
+                        protein_name=''
+                        location_name=''
                         line=line.strip()
                         if line.startswith(ii[0]+' ') and line.startswith(ii[1]+' '):
                             line_seg=line.split(' ')
@@ -96,7 +99,13 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
                                             protein_name=protein_name_part
                                             pre_ind=w_ind
                                         first_pair=False
-
+                                else:
+                                    if protein_name!='':
+                                        protein_name=protein_name.strip()
+                                        if protein_name not in protein_index_dic.keys():
+                                            protein_index_dic[protein_name]=[ii[0]]
+                                        else:
+                                            protein_index_dic[protein_name].append(ii[0])
                                 if ':LOCATION}' in wi:
                                     symbol_index=wi.find('{')
                                     if pre_ind_loc==0:
@@ -116,11 +125,25 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
                                             location_name=location_name_part
                                             pre_ind_loc=w_ind_loc
                                         first_pair_loc=False
-
+                                else:
+                                    if location_name!='':
+                                        location_name=location_name.strip()
+                                        if location_name not in loc_index_dic.keys():
+                                            loc_index_dic[location_name]=[ii[1]]
+                                        else:
+                                            loc_index_dic[location_name].append(ii[1])
                                 w_ind+=1
                                 w_ind_loc+=1
-                            location_name=location_name.strip()
                             protein_name=protein_name.strip()
+                            if protein_name not in protein_index_dic.keys():
+                                protein_index_dic[protein_name]=[ii[0]]
+                            else:
+                                protein_index_dic[protein_name].append(ii[0])
+                            location_name=location_name.strip()
+                            if location_name not in loc_index_dic.keys():
+                                loc_index_dic[location_name]=[ii[1]]
+                            else:
+                                loc_index_dic[location_name].append(ii[1])
                         elif line.startswith(ii[0]+' '):
                             line_seg=line.split(' ')
                             w_ind=1
@@ -146,10 +169,20 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
                                             protein_name=protein_name_part
                                             pre_ind=w_ind
                                         first_pair=False
-
+                                else:
+                                    if protein_name!='':
+                                        protein_name=protein_name.strip()
+                                        if protein_name not in protein_index_dic.keys():
+                                            protein_index_dic[protein_name]=[ii[0]]
+                                        else:
+                                            protein_index_dic[protein_name].append(ii[0])
                                 w_ind+=1
 
                             protein_name=protein_name.strip()
+                            if protein_name not in protein_index_dic.keys():
+                                protein_index_dic[protein_name]=[ii[0]]
+                            else:
+                                protein_index_dic[protein_name].append(ii[0])
                         elif line.startswith(ii[1]+' '):
                             line_seg=line.split(' ')
                             w_ind_loc=1
@@ -175,21 +208,89 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
                                             location_name=location_name_part
                                             pre_ind_loc=w_ind_loc
                                         first_pair_loc=False
-
+                                else:
+                                    if location_name!='':
+                                        location_name=location_name.strip()
+                                        if location_name not in loc_index_dic.keys():
+                                            loc_index_dic[location_name]=[ii[1]]
+                                        else:
+                                            loc_index_dic[location_name].append(ii[1])
                                 w_ind_loc+=1
                             location_name=location_name.strip()
-                if location_name not in loc_dic.keys():
-                    loc_dic[location_name]=[protein_name]
-                else:
-                    loc_dic[location_name].append(protein_name)
+                            if location_name not in loc_index_dic.keys():
+                                loc_index_dic[location_name]=[ii[1]]
+                            else:
+                                loc_index_dic[location_name].append(ii[1])
 
+            #add something here
+
+            for kli in loc_index_dic.keys():
+                loc_index_dic[kli]=list(set(loc_index_dic[kli]))
+            for kpi in protein_index_dic.keys():
+                protein_index_dic[kpi]=list(set(protein_index_dic[kpi]))
+            #print(loc_index_dic)
+            #print(protein_index_dic)
+            #add the order index for the proteins and location names if they appear more than one time
+            loc_appear_index_dic={}
+            protein_appear_index_dic={}
+            for kli in loc_index_dic.keys():
+                if len(loc_index_dic[kli])==1:
+                    loc_appear_index_dic[kli]=[1]
+                else:
+                    #generate the number list
+                    num_list=[int(ni) for ni in loc_index_dic[kli]]
+                    num_list.sort()
+                    temp_index_list=[num_list.index(int(ni))+1 for ni in loc_index_dic[kli]]
+                    loc_appear_index_dic[kli]=temp_index_list
+
+            for kpi in protein_index_dic.keys():
+                if len(protein_index_dic[kpi])==1:
+                    protein_appear_index_dic[kpi]=[1]
+                else:
+                    #generate the number list
+                    num_list=[int(ni) for ni in protein_index_dic[kpi]]
+                    num_list.sort()
+                    temp_index_list=[num_list.index(int(ni))+1 for ni in protein_index_dic[kpi]]
+                    protein_appear_index_dic[kpi]=temp_index_list
+
+            #print(loc_appear_index_dic)
+            #print(protein_appear_index_dic)
+            first_appear_in_one_line=True
+            #first_location_in_one_line=True
+            for idi in range(len(pair_list)):
+                ii=pair_list[idi]
+                text=instance_text
+
+                if idi !=pair_list.index(ii):
+                    first_appear_in_one_line=False
+                #get the protein and location name
+                #in some cases, there are more than one protein/location name in one line
+                for kpi in protein_index_dic.keys():
+                    if ii[0] in protein_index_dic[kpi]:
+                        if first_appear_in_one_line is True:
+                            protein_name=kpi
+                            protein_appear_index=protein_appear_index_dic[kpi][protein_index_dic[kpi].index(ii[0])]
+                            break
+                        else:
+                            first_appear_in_one_line=True
+                            continue
+                for kli in loc_index_dic.keys():
+                    if ii[1] in loc_index_dic[kli]:
+                        location_name=kli
+                        location_appear_index=loc_appear_index_dic[kli][loc_index_dic[kli].index(ii[1])]
+                        break
+
+                #print('protein appear index:',protein_appear_index)
                 text_low=text.lower()
                 ind=0
+                cur_protein_appear_index=1
+                cur_loc_appear_index=1
+                break_count=0
                 while True:
 
-                    print(fi)
-                    print(protein_name)
-                    print(text)
+                    #print(fi)
+                    #print(protein_name)
+                    #print(text)
                     gene_index=text_low.find(protein_name,ind)
                     if gene_index==-1:
                         protein_name_sp=protein_name.split(' ')
@@ -197,24 +298,44 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
                     if text_low[gene_index-1] not in [' ','-','/',',','.','>'] or text_low[gene_index+len(protein_name)] not in [' ','-','/',',','.','<']:
                         ind=gene_index+len(protein_name)
                     else:
+                        #print('Current protein index:',cur_protein_appear_index)
+                        if protein_appear_index>cur_protein_appear_index:
+                            ind=gene_index+len(protein_name)
+                            cur_protein_appear_index+=1
+                        else:
+                            break
+                    if break_count>5:
                         break
+                    break_count+=1
+                if gene_index==-1:
+                    print(fi)
+                    print(protein_name)
+                    print(text)
                 text=text[0:gene_index+len(protein_name)]+'</Gene>'+text[gene_index+len(protein_name):]
                 text=text[0:gene_index]+'<Gene>'+text[gene_index:]
 
                 text_low=text.lower()
                 indd=0
+                break_count=0
                 while True:
 
-                    print(fi)
-                    print(location_name)
-                    print(text)
+                    #print(fi)
+                    #print(location_name)
+                    #print(text)
                     loc_index=text_low.find(location_name,indd)
 
                     if text_low[loc_index-1] not in [' ','-','/',',','.','(','>'] or text_low[loc_index+len(location_name)] not in [' ','-','/',',','.',';','<']:
 
                         indd=loc_index+len(location_name)
                     else:
+                        if location_appear_index>cur_loc_appear_index:
+                            indd=loc_index+len(location_name)
+                            cur_loc_appear_index+=1
+                        else:
+                            break
+                    if break_count>5:
                         break
+                    break_count+=1
                 text=text[0:loc_index+len(location_name)]+'</Subcellular_location>'+text[loc_index+len(location_name):]
                 text=text[0:loc_index]+'<Subcellular_location>'+text[loc_index:]
                 fo.write('R_PLOC ')
@@ -222,7 +343,14 @@ def generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile):
                 fo.write('\t')
                 fo.write(text)
                 fo.write('\n')
-
+                fo.write('\n')
+                fo.write('\n')
+                fo.write('\n')
+                #print(location_name,'-',protein_name)
+                if location_name not in loc_dic.keys():
+                    loc_dic[location_name]=[protein_name]
+                else:
+                    loc_dic[location_name].append(protein_name)
     print(file_list)
     fre_dic={}
     print(loc_dic)
@@ -339,12 +467,12 @@ def generate_neg_ploc_from_craven(inputfolder,outputfile,picklefile):
 if __name__ == '__main__':
 
     inputfolder='./data/YPD/pos/'
-    outputfile='./data/pos.txt'
+    outputfile='./data/pos_new.txt'
     negfolder='./data/YPD/all/'
     negfile='./data/neg.txt'
     picklefile='./data/location_dic.pickle'
-    #generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile)
-    generate_neg_ploc_from_craven(negfolder,negfile,picklefile)
+    generate_pos_ploc_from_craven(inputfolder,outputfile,picklefile)
+    #generate_neg_ploc_from_craven(negfolder,negfile,picklefile)
     #test of reading the pickle file
     with open(picklefile, 'rb') as f:
         data = pickle.load(f,encoding="latin1")
